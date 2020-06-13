@@ -41,19 +41,27 @@ class DeviceControlsService : ControlsProviderService() {
             .setSubtitle("おすとON/OFFが切り替わります。") // サブタイトル
             .setDeviceType(DeviceTypes.TYPE_FAN) // 多分アイコンに使われてる？
             .build()
-        // スライダーサンプル
-        val sliderControl = Control.StatelessBuilder(SLIDER_BUTTON_ID, pendingIntent)
+
+        // スライダー。参考にした：https://gist.github.com/KieronQuinn/c9950f3ee09e11f305ce16e7f48f03b8
+        val sliderControl = Control.StatefulBuilder(SLIDER_BUTTON_ID, pendingIntent)
             .setTitle("スライダーサンプル") // たいとる
             .setSubtitle("スライダーです。") // サブタイトル
             .setDeviceType(DeviceTypes.TYPE_LIGHT) // 多分アイコンに使われてる？
-            .build()
-
+            .setControlId(SLIDER_BUTTON_ID)
+            .setStatus(Control.STATUS_OK) // 現在の状態
+        // スライダー
+        sliderControl.setControlTemplate(
+            ToggleRangeTemplate(
+                "slider_template",
+                ControlButton(true, "slider_button"),
+                RangeTemplate("range", 0f, 10f, 1f, 1f, null)
+            )
+        )
         controlList.add(toggleControl)
-        controlList.add(sliderControl)
+        controlList.add(sliderControl.build())
 
         // Reactive Streamsの知識が必要な模様。私にはないのでサンプルコピペする。
         return FlowAdapters.toFlowPublisher(Flowable.fromIterable(controlList))
-
     }
 
     /**
@@ -98,16 +106,21 @@ class DeviceControlsService : ControlsProviderService() {
                 if (p1 is FloatAction) {
                     // 現在の値
                     val currentValue = p1.newValue
-                    val slider = RangeTemplate("range_template", 1f, 10f, currentValue, 1f, "%.1f")
-                    // Control更新
-                    val control = Control.StatefulBuilder(SLIDER_BUTTON_ID, pendingIntent)
+                    val sliderControl = Control.StatefulBuilder(SLIDER_BUTTON_ID, pendingIntent)
                         .setTitle("スライダーサンプル") // たいとる
                         .setSubtitle("スライダーです。") // サブタイトル
                         .setDeviceType(DeviceTypes.TYPE_LIGHT) // 多分アイコンに使われてる？
+                        .setControlId(SLIDER_BUTTON_ID)
                         .setStatus(Control.STATUS_OK) // 現在の状態
-                        .setControlTemplate(slider) // 今回はスライダー
-                        .build()
-                    updatePublisher.onNext(control)
+                    val controlButton = ControlButton(true, "slider_button")
+                    sliderControl.setControlTemplate(
+                        ToggleRangeTemplate(
+                            "slider_template",
+                            controlButton,
+                            RangeTemplate("range", 0f, 10f, currentValue, 1f, null)
+                        )
+                    )
+                    updatePublisher.onNext(sliderControl.build())
                 }
             }
         }
@@ -128,6 +141,8 @@ class DeviceControlsService : ControlsProviderService() {
         // 知識不足でわからん
         updatePublisher = ReplayProcessor.create()
 
+        val controlList = arrayListOf<Control>()
+
         // 分岐
         if (p0.contains(TOGGLE_BUTTON_ID)) {
             // ON/OFF
@@ -143,20 +158,24 @@ class DeviceControlsService : ControlsProviderService() {
             updatePublisher.onNext(control)
         }
         if (p0.contains(SLIDER_BUTTON_ID)) {
-            // スライダー
-            val slider = RangeTemplate("range_template", 1f, 10f, 5f, 1f, null)
-            // ここで作るControlは StatefulBuilder を使う。
-            val control = Control.StatefulBuilder(SLIDER_BUTTON_ID, pendingIntent)
+            val sliderControl = Control.StatefulBuilder(SLIDER_BUTTON_ID, pendingIntent)
                 .setTitle("スライダーサンプル") // たいとる
                 .setSubtitle("スライダーです。") // サブタイトル
                 .setDeviceType(DeviceTypes.TYPE_LIGHT) // 多分アイコンに使われてる？
+                .setControlId(SLIDER_BUTTON_ID)
                 .setStatus(Control.STATUS_OK) // 現在の状態
-                .setControlTemplate(slider) // 今回はスライダー
-                .build()
-            updatePublisher.onNext(control)
+            sliderControl.setControlTemplate(
+                ToggleRangeTemplate(
+                    "slider_template",
+                    ControlButton(true, "slider_button"),
+                    RangeTemplate("range", 0f, 10f, 1f, 1f, null)
+                )
+            )
+            updatePublisher.onNext(sliderControl.build())
         }
 
         return FlowAdapters.toFlowPublisher(updatePublisher)
+
     }
 
 }
